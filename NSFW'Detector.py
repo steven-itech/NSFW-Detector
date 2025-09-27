@@ -51,10 +51,12 @@ try:
                     frames_to_check = []
 
                     for count in range(0, total, step):
+
                         capture.set(cv2.CAP_PROP_POS_FRAMES, count)
                         ret, frame = capture.read()
-                        if not ret:
 
+                        if not ret:
+                            
                             continue
 
                         img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
@@ -63,22 +65,22 @@ try:
 
                         for category in pred:
 
-                            if "NSFW" in category.get("label","").upper() and category.get("score",0) > 0.5:
+                            if "NSFW" in category.get("label", "").upper() and category.get("score", 0) > 0.5:
                                 nsfw_detected = True
+                                
                                 break
 
                         if nsfw_detected:
-
+                            
                             break
 
                     capture.release()
 
                     if not nsfw_detected:
-
+                        
                         continue
 
-                    prediction = [{"label":"NSFW","score":1.0}]
-
+                    prediction = [{"label": "NSFW", "score": 1.0}]
                     nsfw = True
 
                 else:
@@ -97,8 +99,8 @@ try:
 
                         score = max(score, value)
 
-                        if value > 0.5: 
-
+                        if value > 0.5:
+                            
                             nsfw_flag = True
 
                 label = "NSFW" if nsfw_flag else "NORMAL"
@@ -107,9 +109,9 @@ try:
                 writer.writerow([file, file_path, label, percentage])
 
                 if nsfw_flag:
-                    
+
                     print(f"Un fichier NSFW vient d'être trouvé : {file}, celui-ci est désormais en quarantaine !")
-                    
+
                     with open(file_path, "rb") as f:
 
                         file_hash = hashlib.sha256(f.read()).hexdigest()
@@ -124,7 +126,7 @@ try:
                         image.save(os.path.join(quarantine_path, file))
 
                         os.remove(file_path)
-                    
+
                     else:
 
                         capture = cv2.VideoCapture(file_path)
@@ -134,7 +136,7 @@ try:
                         fps = capture.get(cv2.CAP_PROP_FPS)
                         width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH))
                         height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                        
+
                         out = cv2.VideoWriter(output_path, four_cc, fps, (width, height))
 
                         while True:
@@ -142,7 +144,7 @@ try:
                             ret, frame = capture.read()
 
                             if not ret:
-
+                                
                                 break
 
                             frame = cv2.GaussianBlur(frame, (51, 51), 0)
@@ -154,5 +156,5 @@ try:
                         os.remove(file_path)
 
 except KeyboardInterrupt:
-    
+
     pass
