@@ -21,8 +21,8 @@ quarantine_path = os.path.join(desktop_path, "quarantaine")
 
 os.makedirs(quarantine_path, exist_ok=True)
 
-report_path = os.path.join(desktop_path, "rapport.csv").strip()
-hash_path = os.path.join(desktop_path, "nsfw_hash.txt").strip()
+report_path = os.path.join(desktop_path, "rapport.csv")
+hash_path = os.path.join(desktop_path, "nsfw_hash.txt")
 
 try:
 
@@ -31,13 +31,11 @@ try:
         writer = csv.writer(csv_file)
         writer.writerow(["Nom :", "Chemin :", "Catégorie :", "Confiance :"])
 
-        os.system("cls")
-        
         for folder, subfolders, files in os.walk(desktop_path):
 
             for file in files:
 
-                file_path = os.path.join(folder, file).strip()
+                file_path = os.path.join(folder, file)
 
                 if file.lower().endswith(image_formats):
 
@@ -47,44 +45,39 @@ try:
                 elif file.lower().endswith(video_formats):
 
                     capture = cv2.VideoCapture(file_path)
-
-                    frames = []
-
                     total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
                     step = max(1, total // 5)
+                    nsfw_detected = False
+                    frames_to_check = []
 
                     for count in range(0, total, step):
-
                         capture.set(cv2.CAP_PROP_POS_FRAMES, count)
                         ret, frame = capture.read()
-
                         if not ret:
-                            
                             continue
-
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        frame = Image.fromarray(frame)
-                        frames.append(frame)
+                        img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                        pred = model_nsfw(img)
+                        frames_to_check.append(count)
+                        for category in pred:
+                            if "NSFW" in category.get("label","").upper() and category.get("score",0) > 0.5:
+                                nsfw_detected = True
+                                break
+                        if nsfw_detected:
+                            break
 
                     capture.release()
 
-                    if not frames:
-
+                    if not nsfw_detected:
                         continue
 
-                    predictions = []
-
-                    for frame in frames:
-
-                        predictions.extend(model_nsfw(frame))
-
-                    prediction = predictions
+                    prediction = [{"label":"NSFW","score":1.0}]
+                    nsfw = True
 
                 else:
 
                     continue
 
-                nsfw = False
+                nsfw_flag = False
                 score = 0.0
 
                 for category in prediction:
@@ -98,14 +91,14 @@ try:
 
                         if value > 0.5: 
 
-                            nsfw = True
+                            nsfw_flag = True
 
-                label = "NSFW" if nsfw else "NORMAL"
+                label = "NSFW" if nsfw_flag else "NORMAL"
                 percentage = f"{score*100:.2f} %"
 
                 writer.writerow([file, file_path, label, percentage])
 
-                if nsfw:
+                if nsfw_flag:
                     
                     print(f"Un fichier NSFW vient d'être trouvé : {file}, celui-ci est désormais en quarantaine !")
                     
@@ -128,7 +121,6 @@ try:
 
                         capture = cv2.VideoCapture(file_path)
                         four_cc = cv2.VideoWriter_fourcc(*"mp4v")
-
                         output_path = os.path.join(quarantine_path, file)
 
                         fps = capture.get(cv2.CAP_PROP_FPS)
