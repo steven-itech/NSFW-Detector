@@ -54,23 +54,31 @@ try:
                         capture.set(cv2.CAP_PROP_POS_FRAMES, count)
                         ret, frame = capture.read()
                         if not ret:
+
                             continue
+
                         img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                         pred = model_nsfw(img)
                         frames_to_check.append(count)
+
                         for category in pred:
+
                             if "NSFW" in category.get("label","").upper() and category.get("score",0) > 0.5:
                                 nsfw_detected = True
                                 break
+
                         if nsfw_detected:
+
                             break
 
                     capture.release()
 
                     if not nsfw_detected:
+
                         continue
 
                     prediction = [{"label":"NSFW","score":1.0}]
+
                     nsfw = True
 
                 else:
